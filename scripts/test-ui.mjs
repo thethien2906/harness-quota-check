@@ -1,0 +1,16 @@
+import { createServer } from 'vite';
+import { spawn } from 'node:child_process';
+import { mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const temp = join(root, '.cache/tmp');
+await mkdir(temp, { recursive: true });
+process.env.TEMP = temp; process.env.TMP = temp;
+process.env.PWTEST_CACHE_DIR = join(root, '.cache/playwright');
+process.env.QUOTA_PEEK_TEST_URL = 'http://127.0.0.1:1430';
+const server = await createServer({ configFile: join(root, 'vite.config.ts'), server: { port: 1430, strictPort: true } });
+await server.listen();
+const child = spawn(process.execPath, [join(root, 'node_modules/@playwright/test/cli.js'), 'test', ...process.argv.slice(2)], { cwd: root, env: process.env, stdio: 'inherit' });
+child.on('error', async () => { await server.close(); process.exit(1); });
+child.on('exit', async code => { await server.close(); process.exit(code || 0); });

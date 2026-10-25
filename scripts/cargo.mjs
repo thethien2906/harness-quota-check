@@ -1,0 +1,13 @@
+import { registryBridge } from './cargo-registry.mjs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const bridge = await registryBridge();
+const cargoHome = join(root, '.cache/cargo');
+await mkdir(cargoHome, { recursive: true });
+await writeFile(join(cargoHome, 'config.toml'), `[source.crates-io]\nreplace-with = "node-https"\n[source.node-https]\nregistry = "${bridge.url}"\n`);
+const child = spawn('cargo', [...process.argv.slice(2), '--manifest-path', join(root, 'src-tauri/Cargo.toml')], { cwd: root, stdio: 'inherit', env: { ...process.env, CARGO_HOME: cargoHome } });
+child.on('error', () => { bridge.close(); process.exit(1); });
+child.on('exit', code => { bridge.close(); process.exit(code || 0); });

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>Quota Peek - Needle</title>
+  <rect x="4" y="4" width="120" height="120" rx="29" fill="#111111"/>
+  <path d="M42.79 85.21A30 30 0 1 1 85.21 85.21" stroke="#F0F0F0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M78 50L68 70C66.2 73.6 61.4 74.1 58.8 71.2C56.4 68.5 57.3 64.3 60.5 62.5L78 50Z" fill="#F0F0F0"/>
+</svg>

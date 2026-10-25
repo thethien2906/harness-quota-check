@@ -1,0 +1,11 @@
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import type { InitialState, Mode, Provider, ProviderState, ViewState } from './types';
+export const desktop = isTauri();
+export const initialState = () => desktop ? invoke<InitialState>('initial_state') : Promise.resolve<InitialState>({ providers: {}, view: { mode: 'compact', pinned: false } });
+export const changeMode = (mode: Mode) => desktop ? invoke('set_mode', { mode }) : Promise.resolve();
+export const pinWindow = (pinned: boolean) => desktop ? invoke('set_pinned', { pinned }) : Promise.resolve();
+export const refreshProvider = (provider: Provider) => desktop ? invoke('refresh_provider', { provider }) : Promise.resolve();
+export const quit = () => desktop ? invoke('quit') : Promise.resolve();
+export const onProvider = (fn: (state: ProviderState) => void) => desktop ? listen<ProviderState>('provider-state', event => fn(event.payload)) : Promise.resolve(() => {});
+export const onView = (fn: (state: ViewState) => void) => desktop ? listen<ViewState>('view-state', event => fn(event.payload)) : Promise.resolve(() => {});

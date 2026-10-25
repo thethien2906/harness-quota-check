@@ -1,0 +1,11 @@
+import { mkdir, cp, copyFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const target = join(root, 'release/Quota Peek');
+await mkdir(target, { recursive: true });
+await copyFile(join(root, 'src-tauri/target/release/quota-peek.exe'), join(target, 'quota-peek.exe'));
+await cp(join(root, 'src-tauri/resources'), join(target, 'resources'), { recursive: true });
+await copyFile(join(root, 'public/assets/SOURCES.md'), join(target, 'ASSET-SOURCES.md'));
+for (const name of ['Geist-OFL.txt', 'GeistMono-OFL.txt', 'lobe-icons-LICENSE']) await copyFile(join(root, 'public/assets', name), join(target, name));
+console.log('Portable app: release/Quota Peek/quota-peek.exe');
