@@ -16,7 +16,7 @@ Panel mặc định ẩn ở mép màn hình, trượt ra khi rê chuột và c�
 | Antigravity | Model phiên bản cao nhất được nguồn trả về, ví dụ Argon 4; không chọn model có phần trăm cao nhất |
 | Claude Code | Cửa sổ 5 giờ |
 
-Nếu chưa chạy hoặc thiếu quota phù hợp, icon mờ và không hiện vòng quota giả. Không fallback từ quota 5 giờ sang tuần. Quy tắc xếp thứ tự phiên bản giữa các họ model Antigravity cần xác định rõ khi tích hợp dữ liệu thật; preview dùng model mẫu Argon 4. Accessible name cho trình đọc màn hình vẫn có tên công cụ và trạng thái dù không hiện nhãn bằng mắt.
+Nếu chưa chạy hoặc thiếu quota phù hợp, icon mờ và không hiện vòng quota giả. Không fallback từ quota 5 giờ sang tuần. Quy tắc xếp thứ tự phiên bản giữa các họ model Antigravity (so sánh từng phần số, ưu tiên Argon khi cùng phiên bản, lấy phần trăm thấp nhất đã đo khi cùng phiên bản và họ) được cài trong `src/selectors.ts`; preview dùng model mẫu Argon 4. Accessible name cho trình đọc màn hình vẫn có tên công cụ và trạng thái dù không hiện nhãn bằng mắt.
 
 **Chi tiết:** giữ tabs, các cửa sổ quota, thời điểm reset, chi tiết model và trạng thái cập nhật như thiết kế hiện tại. Khi click icon, panel chi tiết mở rộng vào trong từ cùng điểm neo ở mép màn hình của thanh compact; không mở modal ở giữa màn hình. Quay lại compact vẫn giữ nguyên điểm neo.
 
@@ -41,7 +41,7 @@ Phiên bản desktop dùng **Tauri 2 + React + TypeScript + Tailwind CSS**, vớ
 
 Trong quá trình phát triển, chạy **`npm run dev`** để mở cả Vite và Tauri, có cập nhật giao diện khi sửa code. `desktop:dev` là alias tương đương. Không dùng launcher riêng. Dừng phiên dev hiện tại bằng Ctrl+C trước khi chạy phiên mới.
 
-Sau khi build bản portable, mở `release/Quota Peek/quota-peek.exe` trực tiếp. Giữ nguyên cả thư mục portable khi di chuyển, vì app cần runtime và adapter trong `resources/`.
+Sau khi build bản portable, mở `release/Quota Peek/quota-peek.exe` trực tiếp. Giữ nguyên cả thư mục portable khi di chuyển, vì app cần runtime và adapter trong `resources/`. Bản portable và installer chưa được ký số nên Windows SmartScreen sẽ hiện cảnh báo: chọn More info rồi Run anyway. Installer NSIS cài theo từng người dùng (không cần quyền admin) và tự cài WebView2 Evergreen nếu máy còn thiếu.
 
 App khởi động ẩn ngay ở mép phải màn hình chính. Rê chuột vào vạch mép 180 ms để mở thanh compact 54×152 DIP; thanh trượt ra trong 240 ms bằng animation, không resize cửa sổ giữa hidden và compact. Rời chuột 650 ms để tự ẩn, không có thời gian giữ mở 15 giây. Khi ẩn, phần trong suốt cho phép click vào app phía dưới. Dùng khay hệ thống để mở/ẩn/thoát; ghim trong chế độ chi tiết để giữ panel mở.
 
@@ -60,7 +60,7 @@ npm.cmd run desktop:installer
 
 `desktop:build` tạo executable và bản portable. `desktop:installer` là bước tùy chọn sau đó để tạo installer NSIS trong `src-tauri/target/release/bundle/nsis/`. `package:portable` dùng để đóng gói lại executable đã build mà không compile lại.
 
-Trước khi build bản desktop, cung cấp client id/secret OAuth của Antigravity: đặt file `providers/antigravity-oauth.local.json` (đã gitignore) hoặc biến môi trường `QUOTA_PEEK_ANTIGRAVITY_CLIENT_ID` và `QUOTA_PEEK_ANTIGRAVITY_CLIENT_SECRET`. File cục bộ được đóng gói vào `resources/providers/` khi build; không commit giá trị thật vào repo.
+Antigravity dùng client id/secret OAuth công khai của ứng dụng cài sẵn, giống jcode và Antigravity IDE; đây không phải bí mật của riêng bạn và không cần Google Cloud project. Đặt giá trị trong `providers/antigravity-oauth.local.json` (đã gitignore để tránh cảnh báo secret scanning của GitHub) hoặc biến môi trường `QUOTA_PEEK_ANTIGRAVITY_CLIENT_ID` và `QUOTA_PEEK_ANTIGRAVITY_CLIENT_SECRET`. `prepare:desktop` đọc các giá trị này và ghi `resources/providers/antigravity-oauth.json` để đóng gói; file `.local.json` không được copy thẳng vào resources. Vì là định danh công khai nên đóng gói là bình thường, không cần xoay (rotate).
 
 ```powershell
 npm.cmd test
@@ -70,11 +70,11 @@ npm.cmd run build
 
 `npm.cmd run dev:web` chỉ mở UI trình duyệt ở `http://127.0.0.1:1420`; thêm `?preview=1` để dùng dữ liệu minh họa. Browser mặc định không giả vờ đã kết nối quota. Giao diện web không đọc credential hoặc gọi API provider.
 
-Các script build đặt cache Cargo/npm trong workspace. Bridge registry chỉ phục vụ build: Node thực hiện HTTPS xác minh chứng chỉ tới crates.io, Cargo dùng loopback; không tắt TLS verification và không đưa bridge này vào app. Không chạy đồng thời hai lệnh desktop/Cargo vì cùng dùng cổng build 38471.
+Các script build đặt cache Cargo/npm trong workspace. Bridge registry chỉ phục vụ build: Node thực hiện HTTPS xác minh chứng chỉ tới crates.io, Cargo dùng loopback; không tắt TLS verification và không đưa bridge này vào app. Bridge ưu tiên cổng 38471 (đổi bằng `QUOTA_PEEK_CARGO_PORT`) và tự chuyển sang cổng tạm nếu cổng đã bận, nên có thể chạy nhiều build desktop song song.
 
-### Publish 0.1.0
+### Publish bản phát hành
 
-Sau khi build portable và installer, chạy `npm run package:release` để tạo ZIP và checksum. Chạy `npm run release:publish` từ terminal của người phát hành để commit source, push `main`, tạo tag chính xác `0.1.0`, upload binary và publish GitHub release tới `thethien2906/harness-quota-check`.
+Sau khi build portable và installer, chạy `npm run package:release` để tạo ZIP và checksum. Chạy `npm run release:publish` từ terminal của người phát hành để commit source, push `main`, tạo tag đúng theo `version` trong `package.json`, upload binary và publish GitHub release tới `thethien2906/harness-quota-check` (đổi repo bằng biến môi trường `QUOTA_PEEK_RELEASE_REPO`).
 
 Script dùng GitHub CLI đang cài hoặc bản portable trong `.cache/gh/bin/gh.exe`; dùng xác thực GitHub hiện có, chỉ yêu cầu đăng nhập qua trình duyệt nếu chưa có. Không ghi token vào repo hoặc truyền token qua tham số lệnh. Không force-push, không di chuyển tag đã tồn tại, kiểm tra không track archive/build output trước khi push. `RnD/` luôn được ignore.
 

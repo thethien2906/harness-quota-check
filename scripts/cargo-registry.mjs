@@ -1,7 +1,7 @@
 // Build-time transport bridge: Cargo's Windows TLS can be unavailable in a
 // restricted shell. Node performs normal verified HTTPS to fixed public hosts.
 import http from 'node:http';
-export async function registryBridge() {
+export async function registryBridge(preferred = Number(process.env.QUOTA_PEEK_CARGO_PORT) || 38471) {
   const server = http.createServer(async (req, res) => {
     const path = req.url || '';
     if (path === '/index/config.json') {
@@ -18,6 +18,15 @@ export async function registryBridge() {
       res.end(Buffer.from(await upstream.arrayBuffer()));
     } catch { res.writeHead(502).end(); }
   });
-  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(38471, '127.0.0.1', resolve); });
+  // Prefer the fixed port so concurrent desktop builds can be told apart, but
+  // fall back to an ephemeral port instead of failing when it is already busy.
+  const listen = port => new Promise((resolve, reject) => {
+    const onError = error => { server.removeListener('listening', onListening); reject(error); };
+    const onListening = () => { server.removeListener('error', onError); resolve(); };
+    server.once('error', onError); server.once('listening', onListening);
+    server.listen(port, '127.0.0.1');
+  });
+  try { await listen(preferred); }
+  catch (error) { if (error.code !== 'EADDRINUSE') throw error; await listen(0); }
   return { url: `sparse+http://127.0.0.1:${server.address().port}/index/`, close: () => server.close() };
 }

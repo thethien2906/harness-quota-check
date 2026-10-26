@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSavedAuth, loadSavedAuth, normalizeCloudModels, mergeQuotaBuckets, fetchAccountQuota, googleJson } from './antigravity-oauth.mjs';
+import { parseSavedAuth, loadSavedAuth, normalizeCloudModels, mergeQuotaBuckets, fetchAccountQuota, googleJson, resolveClientCredentials } from './antigravity-oauth.mjs';
 import { getAntigravitySnapshot, getLocalAntigravitySnapshot, normalizeAntigravity } from './antigravity.mjs';
 import { removeOwnedBridge } from './cleanup-antigravity-bridge.mjs';
 import { join } from 'node:path';
@@ -9,6 +9,23 @@ const auth = { source: 'jcode', accessToken: 'private-test-access', refreshToken
 const summary = { groups: [{ displayName: 'Gemini', buckets: [{ bucketId: 'gemini-weekly', window: 'weekly', remainingFraction: 0.63 }] }] };
 const candidate = { id: 44, port: 55555, host: '127.0.0.1', kind: 'cli', csrf: '' };
 const error = code => Object.assign(new Error('private-token-must-not-escape'), { code });
+
+test('Antigravity client credential resolves env, then baked build file, then dev file, and never strips the fallback', async () => {
+  const env = await resolveClientCredentials({ env: { QUOTA_PEEK_ANTIGRAVITY_CLIENT_ID: 'env-id', QUOTA_PEEK_ANTIGRAVITY_CLIENT_SECRET: 'env-secret' }, read: () => assert.fail() });
+  assert.deepEqual(env, { clientId: 'env-id', clientSecret: 'env-secret' });
+  const baked = await resolveClientCredentials({ env: {}, read: async path => {
+    if (/antigravity-oauth\.json$/.test(path)) return JSON.stringify({ clientId: 'bundled-id', clientSecret: 'bundled-secret' });
+    assert.fail('a baked credential must be used before the untracked dev file');
+  } });
+  assert.deepEqual(baked, { clientId: 'bundled-id', clientSecret: 'bundled-secret' });
+  const missing = () => Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+  const dev = await resolveClientCredentials({ env: {}, read: async path => {
+    if (/antigravity-oauth\.local\.json$/.test(path)) return JSON.stringify({ clientId: 'dev-id', clientSecret: 'dev-secret' });
+    throw missing();
+  } });
+  assert.deepEqual(dev, { clientId: 'dev-id', clientSecret: 'dev-secret' });
+  assert.equal(await resolveClientCredentials({ env: {}, read: async () => { throw missing(); } }), null);
+});
 
 test('parses both jcode epoch expiry and native Go OAuth expiry', () => {
   const first = parseSavedAuth({ access_token: 'test', expires_at: 1792900000000 }, 'jcode');

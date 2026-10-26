@@ -77,7 +77,7 @@ export async function readQuota({ proxy = false, executable, home, spawnProcess 
   try {
     if (websocket) await websocket.ready;
     phase = 'initialize';
-    await request('initialize', { clientInfo: { name: 'quota_peek', title: 'Quota Peek', version: '0.1.0' } });
+    await request('initialize', { clientInfo: { name: 'quota_peek', title: 'Quota Peek', version: '0.2.0' } });
     send({ method: 'initialized', params: {} });
     phase = 'rate-limits';
     const result = await request('account/rateLimits/read', null);

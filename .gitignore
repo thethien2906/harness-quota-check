@@ -7,6 +7,7 @@ dist/
 .cache/
 .commandcode/
 providers/antigravity-oauth.local.json
+*.local.json
 src-tauri/target/
 src-tauri/resources/runtime/
 *.tsbuildinfo

@@ -18,21 +18,30 @@ const identity = {
 };
 const fail = code => Object.assign(new Error(code), { code });
 
-// Installed-app OAuth identifiers, as used by jcode and Antigravity. They are
-// never committed: supply them through the environment or an untracked
-// antigravity-oauth.local.json next to this module. Neither value grants access
-// without the user's existing OAuth token.
+// Installed-app OAuth identifiers, as used by jcode and Antigravity. Neither
+// value grants access without the user's existing OAuth token, and neither is
+// committed. Resolution order: build/runtime environment, the credential baked
+// into a build (antigravity-oauth.json), then an untracked development file
+// (antigravity-oauth.local.json) that is never copied into packaged resources.
+const bundledCredentials = join(root, 'antigravity-oauth.json');
 const localCredentials = join(root, 'antigravity-oauth.local.json');
 let resolvedCredentials;
+export async function resolveClientCredentials({ env = process.env, read = readFile } = {}) {
+  const id = env.QUOTA_PEEK_ANTIGRAVITY_CLIENT_ID, secret = env.QUOTA_PEEK_ANTIGRAVITY_CLIENT_SECRET;
+  if (id && secret) return { clientId: id, clientSecret: secret };
+  for (const path of [bundledCredentials, localCredentials]) {
+    try {
+      const saved = JSON.parse((await read(path, 'utf8')).replace(/^\uFEFF/, ''));
+      if (saved?.clientId && saved?.clientSecret) return { clientId: saved.clientId, clientSecret: saved.clientSecret };
+    } catch { }
+  }
+  return null;
+}
 async function clientCredentials() {
   if (resolvedCredentials) return resolvedCredentials;
-  const env = { clientId: process.env.QUOTA_PEEK_ANTIGRAVITY_CLIENT_ID, clientSecret: process.env.QUOTA_PEEK_ANTIGRAVITY_CLIENT_SECRET };
-  if (env.clientId && env.clientSecret) return (resolvedCredentials = env);
-  try {
-    const saved = JSON.parse((await readFile(localCredentials, 'utf8')).replace(/^\uFEFF/, ''));
-    if (saved?.clientId && saved?.clientSecret) return (resolvedCredentials = { clientId: saved.clientId, clientSecret: saved.clientSecret });
-  } catch { }
-  throw fail('AUTH_NOT_CONFIGURED');
+  const found = await resolveClientCredentials();
+  if (!found) throw fail('AUTH_NOT_CONFIGURED');
+  return (resolvedCredentials = found);
 }
 
 export function parseSavedAuth(raw, source) {

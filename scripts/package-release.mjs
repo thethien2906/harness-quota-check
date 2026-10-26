@@ -1,14 +1,15 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createReadStream, existsSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const folder = join(root, 'release/Quota Peek');
-const zip = join(root, 'release/QuotaPeek_0.1.0_windows_x64_portable.zip');
-const installer = join(root, 'src-tauri/target/release/bundle/nsis/Quota Peek_0.1.0_x64-setup.exe');
+const zip = join(root, `release/QuotaPeek_${version}_windows_x64_portable.zip`);
+const installer = join(root, `src-tauri/target/release/bundle/nsis/Quota Peek_${version}_x64-setup.exe`);
 if (!existsSync(join(folder, 'quota-peek.exe')) || !existsSync(installer)) throw new Error('Build the portable app and installer first.');
 await mkdir(join(root, 'release'), { recursive: true });
 const quote = value => `'${value.replace(/'/g, "''")}'`;

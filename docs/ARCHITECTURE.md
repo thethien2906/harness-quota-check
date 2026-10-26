@@ -21,7 +21,7 @@ React UI ← sanitized snapshot ← coordinator ← provider API / local RPC
 
 Rust quản lý vòng đời Node worker và cửa sổ; worker quản lý lịch refresh 180 giây, dò process 2 giây và một job mỗi provider. React hiển thị snapshot và gửi hành động làm mới, ghim, chọn provider. Không đặt token vào React state, localStorage, event payload hoặc lỗi giao diện. Không cần HTTP server localhost để nối UI với adapter; dùng Tauri IPC và pipe tiến trình. Chỉ lựa chọn theme được lưu localStorage.
 
-Node.js không đi kèm Tauri mặc định. `prepare-desktop.mjs` đóng gói Node hiện dùng để build cùng adapter/helper dưới `src-tauri/resources/`. `package-portable.mjs` tạo thư mục app portable; cấu hình bundle dùng NSIS cho Windows current user. Không yêu cầu người dùng sản phẩm tự cài Node. Không dùng đường dẫn executable hoặc URL do frontend cung cấp.
+Node.js không đi kèm Tauri mặc định. `prepare-desktop.mjs` đóng gói Node hiện dùng để build cùng adapter/helper dưới `src-tauri/resources/`, bỏ qua test fixture và file dev `*.local.json`; credential Antigravity (định danh công khai của jcode/Antigravity, không phải bí mật) được ghi thành `antigravity-oauth.json` từ biến môi trường hoặc file dev khi build. `package-portable.mjs` tạo thư mục app portable; cấu hình bundle dùng NSIS cho Windows current user. Không yêu cầu người dùng sản phẩm tự cài Node. Không dùng đường dẫn executable hoặc URL do frontend cung cấp.
 
 Worker spawn reader riêng cho từng provider, timeout 40 giây. Rust quản lý worker bằng Windows Job Object khi hệ điều hành cho phép để dọn cả helper khi thoát, không chạm tới tiến trình công cụ người dùng. Snapshot được allowlist lại tại coordinator, loại auth, identity thô và diagnostics không dùng cho UI.
 
